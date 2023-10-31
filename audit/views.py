@@ -1,5 +1,6 @@
 from rest_framework.decorators import api_view
 from rest_framework import status
+import openai
 from rest_framework.response import Response
 from .models import Facility, EnergyDevice, EnergyAudit
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -102,3 +103,37 @@ def get_devices(request):
     audits=EnergyDevice.objects.filter(user=request.user)
     serializer = EnergyDeviceSerializer(audits, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+# Set your OpenAI API key
+openai.api_key = "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"
+
+def generate_chat_prediction(prompt):
+    try:
+        response = openai.Completion.create(
+            engine="davinci",
+            prompt=prompt,
+            max_tokens=50  # Adjust this based on requirements
+        )
+
+        # Extract the generated text from the response
+        prediction = response.choices[0].text
+        return prediction
+    except Exception as e:
+        # Handle errors
+        return str(e)
+
+
+#get prediction from gpt
+@api_view(['POST'])
+def get_chat_prediction(request):
+    if request.method == 'POST':
+        # Get the input data from the request
+        prompt = request.data.get('prompt', '')
+
+        # Generate a ChatGPT prediction
+        prediction = generate_chat_prediction(prompt)
+
+        return Response({'prediction': prediction}, status=200)
+    return Response({'error': 'Invalid request'}, status=400)
