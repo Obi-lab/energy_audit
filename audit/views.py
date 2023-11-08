@@ -2,6 +2,10 @@ from rest_framework.decorators import api_view
 from rest_framework import status
 import openai
 from rest_framework.response import Response
+from openai import api_key
+import requests
+
+from rest_framework.response import Response
 from .models import Facility, EnergyDevice, EnergyAudit
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
@@ -106,34 +110,70 @@ def get_devices(request):
 
 
 
-# Set your OpenAI API key
-openai.api_key = "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"
+# # Set your OpenAI API key
+# openai.api_key = "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"
 
-def generate_chat_prediction(prompt):
-    try:
-        response = openai.Completion.create(
-            engine="davinci",
-            prompt=prompt,
-            max_tokens=50  # Adjust this based on requirements
-        )
+# def generate_chat_prediction(prompt):
+#     try:
+#         response = openai.Completion.create(
+#             model="gpt-3.5-turbo",
+#             prompt=prompt,
+#             max_tokens=50  # Adjust this based on requirements
+#         )
 
-        # Extract the generated text from the response
-        prediction = response.choices[0].text
-        return prediction
-    except Exception as e:
-        # Handle errors
-        return str(e)
+#         # Extract the generated text from the response
+#         prediction = response.choices[0].text
+#         return prediction
+#     except Exception as e:
+#         # Handle errors
+#         return str(e)
 
 
-#get prediction from gpt
+# #get prediction from gpt
+# @api_view(['POST'])
+# def get_chat_prediction(request):
+#     if request.method == 'POST':
+#         # Get the input data from the request
+        
+#         prompt = request.data.get('prompt', '')
+
+#         # Generate a ChatGPT prediction
+#         prediction = generate_chat_prediction(prompt)
+
+#         return Response({'prediction': prediction}, status=200)
+#     return Response({'error': 'Invalid request'}, status=400)
+
+
+
 @api_view(['POST'])
 def get_chat_prediction(request):
     if request.method == 'POST':
-        # Get the input data from the request
-        prompt = request.data.get('prompt', '')
+        email = request.data.get('yooptions@gmail.com')  # User's OpenAI email
+        password = request.data.get('ch@t,Gp1')  # User's OpenAI password
+        prompt = request.data.get('prompt')
 
-        # Generate a ChatGPT prediction
-        prediction = generate_chat_prediction(prompt)
+        # Authenticate and obtain an access token using the user's email and password
+        print('Heeeeeeeeeeeeeeer')
+        response = requests.post("https://api.openai.com/v1/users/login", json={"email": email, "password": password})
+        if response.status_code == 200:
+            access_token = response.json()["access_token"]
 
-        return Response({'prediction': prediction}, status=200)
+            # Use the obtained access token to make a ChatGPT API request
+            headers = {
+                "Authorization": f"Bearer {access_token}",
+                "Content-Type": "application/json"
+            }
+
+            data = {
+                "prompt": prompt,
+                "max_tokens": 50  # Adjust based on your requirements
+            }
+
+            chat_response = requests.post("https://api.openai.com/v1/engines/gpt-3.5-turbo/completions", headers=headers, json=data)
+
+            if chat_response.status_code == 200:
+                prediction = chat_response.json()["choices"][0]["text"]
+                return Response({'prediction': prediction}, status=200)
+
+        return Response({'error': 'Authentication failed'}, status=401)
     return Response({'error': 'Invalid request'}, status=400)
